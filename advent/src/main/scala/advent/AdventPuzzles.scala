@@ -2,48 +2,12 @@ package advent
 
 import scala.annotation.tailrec
 import scala.io.Source
-
 import cats.effect.IO
 
-class LineIterator(fileName: String) extends Iterator[String] {
-  private val source = Source.fromFile(fileName)
-  private val lineIterator = source.getLines()
+import scala.util.matching.Regex
+import advent.iterators.*
 
-  override def hasNext: Boolean = lineIterator.hasNext
-
-  override def next(): String = {
-    if (!hasNext) {
-      source.close()
-      throw new NoSuchElementException("End of file reached")
-    }
-    lineIterator.next()
-  }
-
-  def close(): Unit = source.close()
-}
-
-class WordIterator(fileName: String) extends Iterator[String] {
-  private val lineIter = new LineIterator(fileName)
-  private var wordIter: Iterator[String] = Iterator.empty
-
-  override def hasNext: Boolean = {
-    while (!wordIter.hasNext && lineIter.hasNext) {
-      val line = lineIter.next().trim
-      if (line.nonEmpty) {
-        wordIter = line.split("\\s+").iterator
-      }
-    }
-    wordIter.hasNext
-  }
-
-  override def next(): String = {
-    if (!hasNext) throw new NoSuchElementException("No more words")
-    wordIter.next()
-  }
-
-  def close(): Unit = lineIter.close()
-}
-object HelloWorld {
+object AdventPuzzles {
 
   def say(): IO[String] = IO.delay("Hello Cats!")
   private def getDiff(a : List[Int], b: List[Int]): Long =  a.sorted.zip(b.sorted).map((ai,bi) => math.abs(ai-bi)).sum.toLong
@@ -104,6 +68,25 @@ object HelloWorld {
       yield Report(line.split("\\s+").map(_.toInt).toList)
     val safeties = reports.map(x=> (x.isSafe() || x.isSafeWithSkip()))
     return IO.pure(safeties.count(x=>x))
+  }
+
+  def extractMulRegex(path: String): IO[Int] = {
+
+    def extractMulExpressions(input: String): List[(Int, Int)] = {
+      val pattern: Regex = """mul\((\d{1,3}),(\d{1,3})\)""".r
+
+      pattern.findAllMatchIn(input).map { m =>
+        (m.group(1).toInt, m.group(2).toInt)
+      }.toList
+    }
+    val lineIter = new LineIterator(path)
+    val lines = for line <- lineIter yield line
+    val str = lines.mkString
+    val pairs = extractMulExpressions(str)
+    val sum = pairs.map(x => x._1*x._2).sum
+
+
+    return IO.pure(sum)
   }
 
 }
