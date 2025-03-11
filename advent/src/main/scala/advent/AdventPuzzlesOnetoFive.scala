@@ -139,4 +139,43 @@ object AdventPuzzlesOnetoFive {
     return IO.pure(sum)
   }
 
+  def getX_masCounts(path: String): IO[Int] = {
+    val lineIterator = new LineIterator(path)
+    val lines: List[String] = lineIterator.toList
+    val grid: List[List[Char]] = lines.map(x => x.toList)
+    val n = lines.size
+    val m = lines.head.size
+    var sum = 0
+    def travel(x: Int, y: Int): Boolean = {
+      val a = (travelDiag(x+directions(4)(1), y+directions(4)(0))) //down-right
+      val b = (travelDiag(x+directions(5)(1), y+directions(5)(0))) //up-left
+
+      val c = (travelDiag(x+directions(6)(1), y+directions(6)(0))) //down-left
+      val d = (travelDiag(x+directions(7)(1), y+directions(7)(0))) //up-right
+
+      (a,b,c,d) match {
+        case (Right(a1), Right(b1), Right(c1), Right(d1)) if (a1 * b1 == -1) && (c1 * d1 == -1) =>
+          true
+        case _ =>
+          false
+      }
+    }
+    def travelDiag(x: Int, y: Int): Either[Exception, Int] = {
+      if(x < 0 || x >= m || y < 0 || y >= n) {
+        return Left(new IndexOutOfBoundsException())
+      } else if(grid(y)(x) == 'M') {
+        return Right(-1)
+      } else if (grid(y)(x) == 'S') {
+        return Right(1)
+      } else {
+        return Right(0)
+      }
+    }
+    for (i <- 0 until n;j <- 0 until m) {
+      if(grid(i)(j) == 'A' && travel(j, i)) {
+        sum=sum+1
+      }
+    }
+    return IO.pure(sum)
+  }
 }
