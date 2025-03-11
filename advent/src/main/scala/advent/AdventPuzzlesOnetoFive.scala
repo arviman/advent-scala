@@ -7,7 +7,7 @@ import cats.effect.IO
 import scala.util.matching.Regex
 import advent.iterators.*
 
-object AdventPuzzles {
+object AdventPuzzlesOnetoFive {
 
   def say(): IO[String] = IO.delay("Hello Cats!")
   private def getDiff(a : List[Int], b: List[Int]): Long =  a.sorted.zip(b.sorted).map((ai,bi) => math.abs(ai-bi)).sum.toLong
@@ -80,12 +80,62 @@ object AdventPuzzles {
       }.toList
     }
     val lineIter = new LineIterator(path)
-    val lines = for line <- lineIter yield line
-    val str = lines.mkString
+    val str = lineIter.mkString
     val pairs = extractMulExpressions(str)
     val sum = pairs.map(x => x._1*x._2).sum
 
+    return IO.pure(sum)
+  }
 
+  def extractMulRegexDoDont(path: String): IO[Long] = {
+    val lineIter = new LineIterator(path)
+    val input = lineIter.mkString
+    val pattern: Regex = """mul\((\d{1,3}),(\d{1,3})\)|do\(\)|don\'t\(\)""".r
+
+    val (_, sum) = pattern.findAllMatchIn(input).foldLeft((true, 0L)) {
+      case ((_, sum), m ) if m.matched == "do()" => (true, sum)
+      case ((_, sum), m) if m.matched == "don't()" => (false, sum)
+      case ((true, sum), pattern(x, y)) if x != null && y != null => (true, sum + (x.toLong*y.toLong))
+      case (state, _) => state
+    }
+
+    return IO.pure(sum)
+  }
+
+  val directions = List(
+    (0, 1),  // Horizontal (right)
+    (0, -1), // Horizontal (left)
+    (1, 0),  // Vertical (down)
+    (-1, 0), // Vertical (up)
+    (1, 1),  // Diagonal (down-right)
+    (-1, -1), // Diagonal (up-left)
+    (1, -1), // Diagonal (down-left)
+    (-1, 1)   // Diagonal (up-right)
+  )
+
+  def getXmasCounts(path: String): IO[Int] = {
+    val lineIterator = new LineIterator(path)
+    val lines: List[String] = lineIterator.toList
+    val grid: List[List[Char]] = lines.map(x => x.toList)
+    val n = lines.size
+    val m = lines.head.size
+    var vis: Array[Array[Boolean]] = Array.ofDim[Boolean](n, m)
+    val xmas = "XMAS"
+    var sum = 0
+    def travel(x: Int, y: Int, pos: Int, dir: Int): Boolean = {
+      if(x < 0 || x >= m || y < 0 || y >= n || pos > 3)
+        return false
+      if(grid(y)(x) == xmas(pos) && (pos == 3 || travel(x+directions(dir)(1), y+directions(dir)(0), pos+1, dir))) {
+        vis(y)(x) = true
+        return true
+      }
+      return false
+    }
+    for (i <- 0 until n;j <- 0 until m; dir <- 0 until directions.size) {
+      if(travel(j, i, 0, dir)) {
+          sum=sum+1
+      }
+    }
     return IO.pure(sum)
   }
 
